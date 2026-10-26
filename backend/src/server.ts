@@ -1,3 +1,5 @@
+import orderRoutes from "./routes/orders";
+import disputeRoutes from "./routes/disputes";
 import authRoutes from "./routes/auth";
 import express from "express";
 import cors from "cors";
@@ -10,6 +12,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/disputes", disputeRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "wrongitem-backend" });
