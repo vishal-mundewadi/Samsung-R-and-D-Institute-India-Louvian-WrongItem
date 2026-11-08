@@ -39,3 +39,21 @@ class ConnectedLouvain(Louvain):
     def fit(self, graph):
         part = super().fit(graph)
         return split_disconnected(graph, part)
+    
+
+
+class MultiStartLouvain:
+    """Run Louvain several times, keep the best-modularity result."""
+
+    def __init__(self, seed=0, starts=10):
+        self.seed = seed
+        self.starts = starts
+
+    def fit(self, graph):
+        best, best_q = None, float("-inf")
+        for k in range(self.starts):
+            part = Louvain(seed=self.seed * 1000 + k).fit(graph)
+            q = graph.modularity(part)
+            if q > best_q:
+                best, best_q = part, q
+        return best
