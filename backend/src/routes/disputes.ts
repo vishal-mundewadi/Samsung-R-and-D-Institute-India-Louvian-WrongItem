@@ -157,6 +157,70 @@ router.post(
   }
 );
 
+const ISSUE_TEXT: Record<string, string> = {
+  wrong_item: "I received a different item from the one I ordered.",
+  damaged: "The item I received was damaged.",
+  missing_item: "An item from my order was missing from the delivery.",
+  fake_or_used: "The item I received appears to be fake or used.",
+};
+
+// Generate a ready-to-send complaint
+router.get("/:id/complaint", async (req: AuthRequest, res) => {
+  const id = req.params.id as string;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: "Invalid dispute id" });
+  }
+  const dispute = await Dispute.findOne({ _id: id, user: req.userId }).populate("order");
+  if (!dispute) {
+    return res.status(404).json({ error: "Dispute not found" });
+  }
+  const order: any = dispute.order;
+  const verdict: any = dispute.aiVerdict;
+
+  const lines: string[] = [];
+  lines.push("Dear Support Team,");
+  lines.push("");
+  lines.push(`I am writing about my order of "${order.productName}"${order.platform ? ` on ${order.platform}` : ""}.`);
+  lines.push(ISSUE_TEXT[dispute.issueType as string] || "There is a problem with my order.");
+  if (dispute.description) {
+    lines.push(`Details: ${dispute.description}`);
+  }
+  lines.push("");
+  lines.push("Order details:");
+  lines.push(`- Product: ${order.productName}`);
+  if (order.color) lines.push(`- Ordered colour: ${order.color}`);
+  if (order.size) lines.push(`- Size: ${order.size}`);
+  if (order.seller) lines.push(`- Seller: ${order.seller}`);
+  if (order.deliveredAt) lines.push(`- Delivered on: ${new Date(order.deliveredAt).toDateString()}`);
+  if (verdict) {
+    lines.push("");
+    lines.push(
+      `A colour comparison of the listing photo and my received photo gave: ${verdict.verdict} ` +
+        `(listing: ${verdict.listing_color}, received: ${verdict.received_color}).`
+    );
+  }
+  if (dispute.evidence.length > 0) {
+    lines.push("");
+    lines.push("I have attached photo evidence. Each photo has a SHA-256 fingerprint recorded at upload time:");
+    dispute.evidence.forEach((e: any, i: number) => {
+      lines.push(`- Photo ${i + 1}: ${e.hash ? e.hash.slice(0, 16) + "..." : "no hash"}`);
+    });
+  }
+  lines.push("");
+  lines.push("Please arrange a replacement or a full refund at the earliest.");
+  lines.push("If this is not resolved, I will escalate to the platform's grievance officer and the National Consumer Helpline (1915).");
+  lines.push("");
+  lines.push("Regards");
+
+  dispute.timeline.push({ event: "complaint_generated" });
+  await dispute.save();
+
+  res.json({
+    subject: `Request for replacement/refund: ${order.productName}`,
+    body: lines.join("\n"),
+  });
+});
+
 // Change status
 router.patch("/:id/status", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
