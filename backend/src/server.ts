@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB } from "./config/db";
+import insightRoutes from "./routes/insights";
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/disputes", disputeRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/api/insights", insightRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "wrongitem-backend" });
