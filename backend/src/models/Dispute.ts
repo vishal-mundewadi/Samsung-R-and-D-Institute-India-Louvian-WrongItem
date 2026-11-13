@@ -22,6 +22,7 @@ const disputeSchema = new Schema(
       required: true,
     },
     description: { type: String },
+    aiVerdict: { type: Schema.Types.Mixed },
     status: {
       type: String,
       enum: ["open", "complaint_sent", "escalated", "resolved"],

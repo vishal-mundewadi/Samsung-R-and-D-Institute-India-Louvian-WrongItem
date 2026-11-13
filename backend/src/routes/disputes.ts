@@ -110,6 +110,53 @@ router.post("/:id/evidence/upload", upload.single("image"), async (req: AuthRequ
   res.status(201).json(dispute);
 });
 
+// Compare listing photo with received photo using the AI service
+router.post(
+  "/:id/verdict",
+  upload.fields([
+    { name: "listing", maxCount: 1 },
+    { name: "received", maxCount: 1 },
+  ]),
+  async (req: AuthRequest, res) => {
+    const id = req.params.id as string;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid dispute id" });
+    }
+    const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
+    const listing = files?.listing?.[0];
+    const received = files?.received?.[0];
+    if (!listing || !received) {
+      return res.status(400).json({ error: "Attach 'listing' and 'received' images" });
+    }
+    const dispute = await Dispute.findOne({ _id: id, user: req.userId });
+    if (!dispute) {
+      return res.status(404).json({ error: "Dispute not found" });
+    }
+
+    const form = new FormData();
+    form.append("listing", new Blob([new Uint8Array(listing.buffer)], { type: listing.mimetype }), listing.originalname);
+    form.append("received", new Blob([new Uint8Array(received.buffer)], { type: received.mimetype }), received.originalname);
+
+    const aiUrl = process.env.AI_SERVICE_URL || "http://localhost:8000";
+    try {
+      const aiRes = await fetch(`${aiUrl}/compare`, { method: "POST", body: form });
+      if (!aiRes.ok) {
+        return res.status(502).json({ error: "AI service returned an error" });
+      }
+      const result: any = await aiRes.json();
+      dispute.aiVerdict = result;
+      dispute.timeline.push({
+        event: "ai_verdict",
+        note: `${result.verdict}: listing ${result.listing_color}, received ${result.received_color}`,
+      });
+      await dispute.save();
+      res.json(result);
+    } catch {
+      res.status(502).json({ error: "AI service unreachable" });
+    }
+  }
+);
+
 // Change status
 router.patch("/:id/status", async (req: AuthRequest, res) => {
   const id = req.params.id as string;
