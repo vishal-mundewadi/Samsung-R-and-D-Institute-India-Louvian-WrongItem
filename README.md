@@ -511,6 +511,6 @@ Any real deployment would need privacy review, fair treatment of sellers, and le
 
 **Vishal Mundewadi**
 
-[GitHub](https://github.com/vishal-mundewadi) · [LinkedIn](https://www.linkedin.com/in/vishal_mundewadi)
+[GitHub](https://github.com/vishal-mundewadi) · [LinkedIn](https://www.linkedin.com/in/vishal-mundewadi-007892328/)
 
 <sub>Built as a personal project. Benchmark data is synthetic.</sub>
